@@ -130,7 +130,7 @@ h3{font-size:16px;font-weight:600;font-family:var(--body)}
 .brief-sum{margin:0;max-width:72ch}
 .bsec{display:flex;flex-direction:column;gap:6px}
 .bsec > .label{font-size:12px;text-transform:uppercase;letter-spacing:.08em;font-weight:600;color:var(--muted)}
-.bsec.ask > .label{color:var(--warn)}
+.bsec.needs > .label{color:var(--warn)}
 .bsec ul.plain{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:4px}
 .brief-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
 .due{font-size:12.5px;color:var(--muted);white-space:nowrap}
@@ -595,7 +595,7 @@ function briefBody(b, withHead){
   return `${withHead?`<div class="brief-head"><div><h2>${esc(b.title||'Brief')}</h2><div class="item-meta" style="margin-top:4px">${b.chat?`<span class="chip plain">${esc(b.chat)}</span>`:''}${b.period?`<span>${esc(b.period)}</span>`:''}<span>Brief date ${esc(fmtDate(b.date))}</span></div></div>
     <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn small" data-act="copy-brief" data-id="${esc(b.id)}">Copy for WhatsApp</button>${src?`<button class="btn small" data-act="open" data-col="docs" data-id="${esc(src.id)}">Open the chat</button>`:''}${S.canWrite?`<button class="btn small" data-act="edit-brief" data-id="${esc(b.id)}">Edit</button>`:''}</div></div>`:''}
     ${b.summary?`<p class="brief-sum">${esc(b.summary)}</p>`:''}
-    ${asks.length?`<div class="bsec ask"><span class="label">Needs Ronit's decision</span><ul class="checks">${asks.map((a,i)=>`<li class="${a.done?'done':''}"><input type="checkbox" id="bk-${esc(b.id)}-${i}" data-act="toggle-brief" data-key="asks" data-id="${esc(b.id)}" data-i="${i}" ${a.done?'checked':''} ${dis}><label for="bk-${esc(b.id)}-${i}"><span>${esc(a.text)}</span></label></li>`).join('')}</ul></div>`:''}
+    ${asks.length?`<div class="bsec needs"><span class="label">Needs Ronit's decision</span><ul class="checks">${asks.map((a,i)=>`<li class="${a.done?'done':''}"><input type="checkbox" id="bk-${esc(b.id)}-${i}" data-act="toggle-brief" data-key="asks" data-id="${esc(b.id)}" data-i="${i}" ${a.done?'checked':''} ${dis}><label for="bk-${esc(b.id)}-${i}"><span>${esc(a.text)}</span></label></li>`).join('')}</ul></div>`:''}
     <div class="brief-grid">
       ${dec.length?`<div class="bsec"><span class="label">Decisions made</span>${ul(dec)}</div>`:''}
       ${money.length?`<div class="bsec"><span class="label">Money & numbers</span>${ul(money)}</div>`:''}
