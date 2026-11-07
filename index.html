@@ -591,7 +591,7 @@ function briefBody(b, withHead){
 function renderRonit(){
   const open = ronitOpen();
   const briefs = briefsSorted();
-  return `<div class="page-head"><div><h1>For Ronit</h1><p>What Ronit needs from the team's chats and meetings: a short brief per chat, plus one list of everything waiting on his decision. Tick items off once he's answered.</p></div></div>
+  return `<div class="page-head"><div><h1>For Ronit</h1><p>What Ronit needs from the team's chats and meetings: a short brief for each period, plus one list of everything waiting on his decision. Tick items off once he's answered.</p></div></div>
   <section class="card wait"><div class="card-head"><span class="label">Waiting on Ronit · ${open.length}</span></div>
     ${open.length?`<ul class="checks">${open.map(x=>{ const key = x.kind==='ask'?'asks':'actions'; const act = x.kind==='meeting-action'?'toggle-action':'toggle-brief'; const id=`wr-${esc(x.id)}-${key}-${x.i}`; return `<li><input type="checkbox" id="${id}" data-act="${act}" data-key="${key}" data-id="${esc(x.id)}" data-i="${x.i}" ${S.canWrite?'':'disabled'}><label for="${id}"><span>${esc(x.text)}</span><br><span class="from">${x.kind==='ask'?'Decision':'Action item'} · from ${esc(x.from)} · ${esc(fmtDate(x.date))}${x.due?` · due ${esc(x.due)}`:''}</span></label></li>`; }).join('')}</ul>`:'<p class="empty">Nothing is waiting on Ronit.</p>'}
   </section>
