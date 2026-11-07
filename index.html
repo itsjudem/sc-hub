@@ -124,6 +124,18 @@ h3{font-size:16px;font-weight:600;font-family:var(--body)}
 .checks li{display:flex;gap:10px;align-items:flex-start;padding:6px 0}
 .checks input{margin-top:4px;width:16px;height:16px;accent-color:var(--accent);flex:none}
 .checks .done span{text-decoration:line-through;color:var(--muted)}
+.chat{display:flex;flex-direction:column;gap:14px}
+.msg{max-width:760px;padding:12px 16px;border-radius:12px;line-height:1.6;overflow-wrap:anywhere}
+.msg.user{align-self:flex-end;background:var(--accent);color:var(--on-accent);white-space:pre-wrap}
+.msg.bot{align-self:flex-start;background:var(--surface);border:1px solid var(--line);white-space:pre-wrap}
+.msg.bot.err{border-color:var(--warn);color:var(--warn)}
+.cite{display:inline-block;font-family:var(--mono);font-size:11px;line-height:1;padding:3px 5px;margin:0 1px;border-radius:5px;background:var(--accent-soft);color:var(--accent);border:0;cursor:pointer;vertical-align:1px;white-space:nowrap}
+.srcs{white-space:normal;margin-top:10px;padding-top:10px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:6px;font-size:13.5px}
+.srcs .src{display:flex;gap:8px;align-items:flex-start}
+.srcs q{color:var(--muted);font-style:italic}
+.ask{display:flex;gap:10px;align-items:flex-end;position:sticky;bottom:0;background:var(--bg);padding:12px 0}
+.ask textarea{flex:1;min-height:52px;max-height:200px;resize:vertical;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+.typing{color:var(--muted)}
 .checks .owner{font-size:12.5px;color:var(--muted);margin-left:auto;white-space:nowrap}
 
 .filters{display:flex;gap:6px;flex-wrap:wrap}
@@ -244,6 +256,7 @@ a[aria-disabled="true"]{opacity:.6;pointer-events:none}
 (() => {
 const ROUTES = [
   {id:'home', label:'Overview'},
+  {id:'assistant', label:'Ask your mini me'},
   {id:'meetings', label:'Meetings', col:'meetings'},
   {id:'scripts', label:'Scripts & templates', col:'scripts'},
   {id:'library', label:'Source of truth', col:'docs'},
@@ -259,6 +272,7 @@ const SUPABASE_URL = "https://dhdxmisazbieajtmhbfm.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_-3hAoEzSLwnIpAbgaODi7Q_6kdiXl0F";
 const textCache = {};
 
+const CHAT = [];
 const S = {meetings:[],scripts:[],docs:[],updates:[],ready:{},status:'connecting',err:'',db:true,canWrite:true,email:'',route:'home',q:'',drawer:null,libCat:'All',libShowOld:false,scriptCat:'All',confirmDel:false};
 
 const $ = s => document.querySelector(s);
@@ -411,8 +425,8 @@ function renderNav(){
 }
 function renderQuick(){
   const map = {home:['new-meeting','New meeting'], meetings:['new-meeting','New meeting'], scripts:['new-script','New script'], library:['new-doc','Add document'], updates:['new-update','Post update']};
-  const [act,label] = map[S.route];
-  $('#quick').innerHTML = S.canWrite && S.db ? `<button class="btn primary" data-act="${act}">+ ${label}</button>` : '';
+  const m = map[S.route];
+  $('#quick').innerHTML = m && S.canWrite && S.db ? `<button class="btn primary" data-act="${m[0]}">+ ${m[1]}</button>` : '';
 }
 function banner(){
   if(S.status==='connecting') return `<div class="banner">Loading the hub…</div>`;
@@ -422,6 +436,7 @@ function banner(){
 function renderContent(){
   const el = $('#content');
   if(S.q.trim()){ el.innerHTML = banner() + renderSearch(); return; }
+  if(S.route==='assistant'){ if(!document.getElementById('ask-form')) el.innerHTML = renderAssistant(); renderChat(); return; }
   const fn = {home:renderHome, meetings:renderMeetings, scripts:renderScripts, library:renderLibrary, updates:renderUpdates}[S.route];
   el.innerHTML = banner() + fn();
 }
@@ -771,6 +786,9 @@ document.addEventListener('click', async e => {
     case 'script-cat': S.scriptCat = el.dataset.v; renderContent(); break;
     case 'lib-cat': S.libCat = el.dataset.v; renderContent(); break;
     case 'lib-old': S.libShowOld = !S.libShowOld; renderContent(); break;
+    case 'ask-suggest': ask(el.dataset.v); break;
+    case 'chat-clear': CHAT.length = 0; renderChat(); break;
+    case 'cite': if(col==='docs' && id) openDrawer('docs', id, 'view'); else if(col==='updates') location.hash = 'updates'; break;
     case 'clear-search': S.q=''; $('#search').value=''; renderContent(); break;
   }
 });
@@ -789,6 +807,62 @@ document.addEventListener('keydown', e => {
   if((e.key==='Enter'||e.key===' ') && e.target.matches('.card[role="button"]')){ e.preventDefault(); e.target.click(); }
 });
 document.addEventListener('submit', e => { e.preventDefault(); });
+
+/* ---------- Ask your mini me ---------- */
+const SUGGEST = ['Which projection workbook should we update?','What changed most recently?','Summarize what the WhatsApp chats say about expenses'];
+function renderAssistant(){
+  return `<div class="page-head"><div><h1>Ask your mini me</h1><p>Ask anything about Salon Cadence. Answers come only from the Source of truth and the Updates log, and every answer shows which document it used. Superseded documents are left out.</p></div><button class="btn" data-act="chat-clear">New conversation</button></div>
+  <div class="chat" id="chat-log" aria-live="polite"></div>
+  <form class="ask" id="ask-form"><textarea id="ask-q" placeholder="e.g. What's the current plan for October to December projections?" aria-label="Your question"></textarea><button class="btn primary" type="submit" id="ask-btn">Ask</button></form>`;
+}
+function fmtAnswer(t){ return esc(t).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>'); }
+function renderChat(){
+  const log = $('#chat-log'); if(!log) return;
+  if(!CHAT.length){
+    log.innerHTML = `<div class="card"><span class="label" style="font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600">Try asking</span><div class="filters">${SUGGEST.map(q=>`<button type="button" data-act="ask-suggest" data-v="${esc(q)}">${esc(q)}</button>`).join('')}</div></div>`;
+    return;
+  }
+  log.innerHTML = CHAT.map(m => {
+    if(m.role==='user') return `<div class="msg user">${esc(m.text)}</div>`;
+    if(m.pending) return `<div class="msg bot typing">Checking the Source of truth…</div>`;
+    if(m.error) return `<div class="msg bot err">${esc(m.error)}</div>`;
+    const used = [];
+    const body = m.answer.map(seg => {
+      const marks = [];
+      seg.citations.forEach(c => { let n = used.findIndex(u=>u.source===c.source); if(n<0){ used.push({source:c.source, quotes:[]}); n=used.length-1; } const u=used[n]; if(c.quote && u.quotes.length<2 && !u.quotes.includes(c.quote)) u.quotes.push(c.quote); if(!marks.includes(n)) marks.push(n); });
+      return fmtAnswer(seg.text) + marks.map(n=>{ const s=m.sources[used[n].source]||{}; return `<button type="button" class="cite" data-act="cite" data-col="${esc(s.col||'')}" data-id="${esc(s.id||'')}" title="${esc(s.title||'')}">${n+1}</button>`; }).join('');
+    }).join('');
+    const srcs = used.length ? `<div class="srcs"><b>Sources</b>${used.map((u,i)=>{ const s=m.sources[u.source]||{}; return `<div class="src"><button type="button" class="cite" data-act="cite" data-col="${esc(s.col||'')}" data-id="${esc(s.id||'')}">${i+1}</button><div><button type="button" class="btn small ghost" style="padding:0" data-act="cite" data-col="${esc(s.col||'')}" data-id="${esc(s.id||'')}">${esc(s.title||'Document')}</button>${u.quotes.map(q=>`<div><q>${esc(q.length>220?q.slice(0,220)+'…':q)}</q></div>`).join('')}</div></div>`; }).join('')}</div>` : `<div class="srcs" style="color:var(--muted)">No document was cited for this answer.</div>`;
+    const skip = m.skipped && m.skipped.length ? `<div class="srcs" style="color:var(--muted)">Too large to include this time: ${esc(m.skipped.join(', '))}</div>` : '';
+    return `<div class="msg bot">${body}${srcs}${skip}</div>`;
+  }).join('');
+  log.lastElementChild && log.lastElementChild.scrollIntoView({block:'nearest'});
+}
+const ASK_ERR = {
+  no_key:'Mini me isn\'t switched on yet: the Claude API key hasn\'t been added in Supabase.',
+  bad_key:'The Claude API key saved in Supabase isn\'t working. Replace it with a new key.',
+  no_credit:'The Claude API account is out of credit. Add credit at console.anthropic.com, then ask again.',
+  busy:'Mini me is busy right now. Wait a minute and ask again.',
+  not_member:'Your email isn\'t on the Salon Cadence team list.',
+};
+async function ask(q){
+  q = q.trim(); if(!q) return;
+  const history = CHAT.filter(m=>!m.pending && !m.error).slice(-6).map(m=>({role:m.role, text: m.role==='user'?m.text:m.answer.map(a=>a.text).join('')}));
+  CHAT.push({role:'user', text:q}); const bot = {role:'bot', pending:true}; CHAT.push(bot); renderChat();
+  const btn = $('#ask-btn'); if(btn) btn.disabled = true;
+  try{
+    const {data, error} = await sb.functions.invoke('sc-assistant', {body:{question:q, history}});
+    let res = data;
+    if(error){ try{ res = await error.context.json(); }catch(_){ res = null; } }
+    if(!res || res.error || !Array.isArray(res.answer)) throw new Error((res && ASK_ERR[res.error]) || 'Mini me couldn\'t answer just now. Try again in a moment.');
+    Object.assign(bot, {pending:false, answer:res.answer, sources:res.sources||[], skipped:res.skipped||[]});
+  }catch(e){ Object.assign(bot, {pending:false, error:e.message}); }
+  if(btn) btn.disabled = false;
+  renderChat();
+}
+document.addEventListener('submit', e => { if(e.target.id==='ask-form'){ e.preventDefault(); const t=$('#ask-q'); const q=t.value; t.value=''; ask(q); } });
+document.addEventListener('keydown', e => { if(e.target.id==='ask-q' && e.key==='Enter' && !e.shiftKey){ e.preventDefault(); $('#ask-form').requestSubmit(); } });
+
 function maybeClose(){ if(S.drawer && S.drawer.mode==='edit' && S.drawer.id) openDrawer(S.drawer.col,S.drawer.id,'view'); else closeDrawer(); }
 $('#scrim').addEventListener('click', maybeClose);
 let st; $('#search').addEventListener('input', e => { clearTimeout(st); st=setTimeout(()=>{ S.q=e.target.value; renderContent(); },150); });
