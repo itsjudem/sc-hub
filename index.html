@@ -124,6 +124,19 @@ h3{font-size:16px;font-weight:600;font-family:var(--body)}
 .checks li{display:flex;gap:10px;align-items:flex-start;padding:6px 0}
 .checks input{margin-top:4px;width:16px;height:16px;accent-color:var(--accent);flex:none}
 .checks .done span{text-decoration:line-through;color:var(--muted)}
+.brief{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:20px;display:flex;flex-direction:column;gap:14px}
+.brief-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap}
+.brief-head h2{font-size:19px}
+.brief-sum{margin:0;max-width:72ch}
+.bsec{display:flex;flex-direction:column;gap:6px}
+.bsec > .label{font-size:12px;text-transform:uppercase;letter-spacing:.08em;font-weight:600;color:var(--muted)}
+.bsec.ask > .label{color:var(--warn)}
+.bsec ul.plain{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:4px}
+.brief-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.due{font-size:12.5px;color:var(--muted);white-space:nowrap}
+.from{font-size:12.5px;color:var(--muted)}
+.wait{border-left:4px solid var(--warn)}
+@media (max-width:820px){.brief-grid{grid-template-columns:1fr}}
 .chat{display:flex;flex-direction:column;gap:14px}
 .msg{max-width:760px;padding:12px 16px;border-radius:12px;line-height:1.6;overflow-wrap:anywhere}
 .msg.user{align-self:flex-end;background:var(--accent);color:var(--on-accent);white-space:pre-wrap}
@@ -256,13 +269,14 @@ a[aria-disabled="true"]{opacity:.6;pointer-events:none}
 (() => {
 const ROUTES = [
   {id:'home', label:'Overview'},
+  {id:'ronit', label:'For Ronit', col:'briefs'},
   {id:'assistant', label:'Ask your mini me'},
   {id:'meetings', label:'Meetings', col:'meetings'},
   {id:'scripts', label:'Scripts & templates', col:'scripts'},
   {id:'library', label:'Source of truth', col:'docs'},
   {id:'updates', label:'Updates log', col:'updates'},
 ];
-const COLS = ['meetings','scripts','docs','updates'];
+const COLS = ['meetings','scripts','docs','updates','briefs'];
 const MEETING_TYPES = ['Weekly projections & expenses','Profit First review','Team meeting','Client call','Other'];
 const SCRIPT_CATS = ['Agenda template','Call script','Talking points','Checklist','Other'];
 const DOC_CATS = ['Finance & projections','Billing & invoices','Processes & SOPs','Meeting records','WhatsApp & chat logs','Contracts & agreements','Other'];
@@ -273,7 +287,7 @@ const SUPABASE_ANON_KEY = "sb_publishable_-3hAoEzSLwnIpAbgaODi7Q_6kdiXl0F";
 const textCache = {};
 
 const CHAT = [];
-const S = {meetings:[],scripts:[],docs:[],updates:[],ready:{},status:'connecting',err:'',db:true,canWrite:true,email:'',route:'home',q:'',drawer:null,libCat:'All',libShowOld:false,scriptCat:'All',confirmDel:false};
+const S = {meetings:[],scripts:[],docs:[],updates:[],briefs:[],ready:{},status:'connecting',err:'',db:true,canWrite:true,email:'',route:'home',q:'',drawer:null,libCat:'All',libShowOld:false,scriptCat:'All',confirmDel:false};
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -420,11 +434,11 @@ function docHref(d){
 /* ---------- render: shell ---------- */
 function renderAll(){ renderNav(); renderQuick(); renderContent(); if(S.drawer && S.drawer.mode==='view') renderDrawer(); }
 function renderNav(){
-  const counts = {meetings:S.meetings.length, scripts:S.scripts.length, docs:S.docs.length, updates:S.updates.length};
+  const counts = {meetings:S.meetings.length, scripts:S.scripts.length, docs:S.docs.length, updates:S.updates.length, briefs:ronitOpen().length};
   $('#nav').innerHTML = ROUTES.map(r => `<a href="#${r.id}" class="${S.route===r.id?'on':''}" ${S.route===r.id?'aria-current="page"':''}>${esc(r.label)}${r.col?`<span class="count">${counts[r.col]}</span>`:''}</a>`).join('');
 }
 function renderQuick(){
-  const map = {home:['new-meeting','New meeting'], meetings:['new-meeting','New meeting'], scripts:['new-script','New script'], library:['new-doc','Add document'], updates:['new-update','Post update']};
+  const map = {home:['new-meeting','New meeting'], meetings:['new-meeting','New meeting'], scripts:['new-script','New script'], library:['new-doc','Add document'], updates:['new-update','Post update'], ronit:['new-brief','New brief']};
   const m = map[S.route];
   $('#quick').innerHTML = m && S.canWrite && S.db ? `<button class="btn primary" data-act="${m[0]}">+ ${m[1]}</button>` : '';
 }
@@ -437,7 +451,7 @@ function renderContent(){
   const el = $('#content');
   if(S.q.trim()){ el.innerHTML = banner() + renderSearch(); return; }
   if(S.route==='assistant'){ if(!document.getElementById('ask-form')) el.innerHTML = renderAssistant(); renderChat(); return; }
-  const fn = {home:renderHome, meetings:renderMeetings, scripts:renderScripts, library:renderLibrary, updates:renderUpdates}[S.route];
+  const fn = {ronit:renderRonit, home:renderHome, meetings:renderMeetings, scripts:renderScripts, library:renderLibrary, updates:renderUpdates}[S.route];
   el.innerHTML = banner() + fn();
 }
 
@@ -547,13 +561,67 @@ function renderUpdates(){
 function renderSearch(){
   const q = S.q.trim().toLowerCase();
   const hit = o => JSON.stringify(o).toLowerCase().includes(q);
-  const m = sortMeetingsAsc(S.meetings.filter(hit)).reverse(), s = S.scripts.filter(hit), d = docsSorted().filter(hit), u = recentUpdates().filter(hit);
-  const total = m.length+s.length+d.length+u.length;
+  const m = sortMeetingsAsc(S.meetings.filter(hit)).reverse(), s = S.scripts.filter(hit), d = docsSorted().filter(hit), u = recentUpdates().filter(hit), b = briefsSorted().filter(hit);
+  const total = m.length+s.length+d.length+u.length+b.length;
   return `<div class="page-head"><div><h1>Results for “${esc(S.q.trim())}”</h1><p>${total} match${total===1?'':'es'}</p></div><button class="btn" data-act="clear-search">Clear search</button></div>
   ${m.length?`<section class="card"><div class="card-head"><span class="label">Meetings</span></div><div class="list">${m.map(meetingItem).join('')}</div></section>`:''}
   ${s.length?`<section class="card"><div class="card-head"><span class="label">Scripts & templates</span></div><div class="cards">${s.map(scriptCard).join('')}</div></section>`:''}
   ${d.length?`<section class="card"><div class="card-head"><span class="label">Source of truth</span></div><div class="list">${d.map(docItem).join('')}</div></section>`:''}
-  ${u.length?`<section class="card"><div class="card-head"><span class="label">Updates</span></div><div class="list">${u.map(updateItem).join('')}</div></section>`:''}`;
+  ${u.length?`<section class="card"><div class="card-head"><span class="label">Updates</span></div><div class="list">${u.map(updateItem).join('')}</div></section>`:''}
+  ${b.length?`<section class="card"><div class="card-head"><span class="label">Briefs for Ronit</span></div><div class="list">${b.map(briefItem).join('')}</div></section>`:''}`;
+}
+
+
+/* ---------- For Ronit ---------- */
+const briefsSorted = () => [...S.briefs].sort((a,b)=>(b.date||'').localeCompare(a.date||'') || (b.createdAt||'').localeCompare(a.createdAt||''));
+const listOf = v => Array.isArray(v) ? v : [];
+const isRonit = o => /\b(ronit|ro)\b/i.test(o||'');
+function ronitOpen(){
+  const out = [];
+  briefsSorted().forEach(b => listOf(b.asks).forEach((a,i) => { if(!a.done && a.text) out.push({kind:'ask', col:'briefs', id:b.id, i, text:a.text, from:b.title, date:b.date}); }));
+  briefsSorted().forEach(b => listOf(b.actions).forEach((a,i) => { if(!a.done && a.text && isRonit(a.owner)) out.push({kind:'brief-action', col:'briefs', id:b.id, i, text:a.text, due:a.due, from:b.title, date:b.date}); }));
+  S.meetings.forEach(m => actionsOf(m).forEach((a,i) => { if(!a.done && a.text && isRonit(a.owner)) out.push({kind:'meeting-action', col:'meetings', id:m.id, i, text:a.text, from:m.title||'Meeting', date:m.date}); }));
+  return out;
+}
+function briefItem(b){
+  const open = listOf(b.asks).filter(a=>!a.done).length;
+  return `<button class="item" data-act="open" data-col="briefs" data-id="${esc(b.id)}">${dateBox(b.date)}<div class="item-body"><span class="item-title">${esc(b.title||'Brief')}</span><span class="item-meta">${b.period?`<span>${esc(b.period)}</span>`:''}${open?`<span class="chip warn">${open} waiting on Ronit</span>`:''}</span>${b.summary?`<span class="item-snip">${esc(b.summary)}</span>`:''}</div></button>`;
+}
+function briefBody(b, withHead){
+  const dis = S.canWrite ? '' : 'disabled';
+  const src = b.sourceDocId && byId('docs', b.sourceDocId);
+  const ul = arr => `<ul class="plain">${arr.map(t=>`<li>${esc(t)}</li>`).join('')}</ul>`;
+  const asks = listOf(b.asks), acts = listOf(b.actions), dec = listOf(b.decisions), money = listOf(b.money);
+  return `${withHead?`<div class="brief-head"><div><h2>${esc(b.title||'Brief')}</h2><div class="item-meta" style="margin-top:4px">${b.chat?`<span class="chip plain">${esc(b.chat)}</span>`:''}${b.period?`<span>${esc(b.period)}</span>`:''}<span>Brief date ${esc(fmtDate(b.date))}</span></div></div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn small" data-act="copy-brief" data-id="${esc(b.id)}">Copy for WhatsApp</button>${src?`<button class="btn small" data-act="open" data-col="docs" data-id="${esc(src.id)}">Open the chat</button>`:''}${S.canWrite?`<button class="btn small" data-act="edit-brief" data-id="${esc(b.id)}">Edit</button>`:''}</div></div>`:''}
+    ${b.summary?`<p class="brief-sum">${esc(b.summary)}</p>`:''}
+    ${asks.length?`<div class="bsec ask"><span class="label">Needs Ronit's decision</span><ul class="checks">${asks.map((a,i)=>`<li class="${a.done?'done':''}"><input type="checkbox" id="bk-${esc(b.id)}-${i}" data-act="toggle-brief" data-key="asks" data-id="${esc(b.id)}" data-i="${i}" ${a.done?'checked':''} ${dis}><label for="bk-${esc(b.id)}-${i}"><span>${esc(a.text)}</span></label></li>`).join('')}</ul></div>`:''}
+    <div class="brief-grid">
+      ${dec.length?`<div class="bsec"><span class="label">Decisions made</span>${ul(dec)}</div>`:''}
+      ${money.length?`<div class="bsec"><span class="label">Money & numbers</span>${ul(money)}</div>`:''}
+    </div>
+    ${acts.length?`<div class="bsec"><span class="label">Action items</span><ul class="checks">${acts.map((a,i)=>`<li class="${a.done?'done':''}"><input type="checkbox" id="ba-${esc(b.id)}-${i}" data-act="toggle-brief" data-key="actions" data-id="${esc(b.id)}" data-i="${i}" ${a.done?'checked':''} ${dis}><label for="ba-${esc(b.id)}-${i}"><span>${esc(a.text)}</span></label><span class="owner">${esc(a.owner||'')}${a.due?` · ${esc(a.due)}`:''}</span></li>`).join('')}</ul></div>`:''}
+    ${b.note?`<p class="from" style="margin:0">${esc(b.note)}</p>`:''}`;
+}
+function renderRonit(){
+  const open = ronitOpen();
+  const briefs = briefsSorted();
+  return `<div class="page-head"><div><h1>For Ronit</h1><p>What Ronit needs from the team's chats and meetings: a short brief per chat, plus one list of everything waiting on his decision. Tick items off once he's answered.</p></div></div>
+  <section class="card wait"><div class="card-head"><span class="label">Waiting on Ronit · ${open.length}</span></div>
+    ${open.length?`<ul class="checks">${open.map(x=>{ const key = x.kind==='ask'?'asks':'actions'; const act = x.kind==='meeting-action'?'toggle-action':'toggle-brief'; const id=`wr-${esc(x.id)}-${key}-${x.i}`; return `<li><input type="checkbox" id="${id}" data-act="${act}" data-key="${key}" data-id="${esc(x.id)}" data-i="${x.i}" ${S.canWrite?'':'disabled'}><label for="${id}"><span>${esc(x.text)}</span><br><span class="from">${x.kind==='ask'?'Decision':'Action item'} · from ${esc(x.from)} · ${esc(fmtDate(x.date))}${x.due?` · due ${esc(x.due)}`:''}</span></label></li>`; }).join('')}</ul>`:'<p class="empty">Nothing is waiting on Ronit.</p>'}
+  </section>
+  ${briefs.length?briefs.map(b=>`<article class="brief" id="brief-${esc(b.id)}">${briefBody(b,true)}</article>`).join(''):'<p class="empty">No briefs yet. Send Jude\'s Claude a WhatsApp export and it will post a brief here.</p>'}`;
+}
+function briefText(b){
+  const L = [`*${b.title||'Brief'}*`];
+  if(b.period) L.push(b.period);
+  if(b.summary) L.push('', b.summary);
+  const sec = (h, arr) => { if(arr.length){ L.push('', `*${h}*`); arr.forEach(t=>L.push('• '+t)); } };
+  sec('Needs your decision', listOf(b.asks).filter(a=>!a.done).map(a=>a.text));
+  sec('Decisions made', listOf(b.decisions));
+  sec('Money & numbers', listOf(b.money));
+  sec('Action items', listOf(b.actions).filter(a=>!a.done).map(a=>`${a.text}${a.owner?` (${a.owner}${a.due?', '+a.due:''})`:''}`));
+  return L.join('\n');
 }
 
 /* ---------- drawer ---------- */
@@ -580,6 +648,7 @@ function loadText(el){
 const editBtns = (col,id) => S.canWrite&&S.db ? `<div class="left">${S.confirmDel?`<button class="btn danger" data-act="del-yes" data-col="${col}" data-id="${esc(id)}">Yes, delete</button><button class="btn" data-act="del-no">Keep</button>`:`<button class="btn danger" data-act="del-ask">Delete</button>`}</div><button class="btn primary" data-act="edit" data-col="${col}" data-id="${esc(id)}">Edit</button>` : '';
 
 const VIEW = {
+  briefs(b){ return head(b.title||'Brief', `${b.period?`<span>${esc(b.period)}</span>`:''}`) + `<div class="d-body">${briefBody(b,false)}</div><div class="d-foot"><button class="btn" data-act="copy-brief" data-id="${esc(b.id)}">Copy for WhatsApp</button>${editBtns('briefs',b.id)}</div>`; },
   meetings(m){
     const ag = agendaOf(m), ac = actionsOf(m);
     const dis = S.canWrite ? '' : 'disabled';
@@ -625,6 +694,23 @@ const acRow = (a={}) => `<div class="row-item" data-done="${a.done?1:0}"><input 
 const foot = (label='Save') => `<div class="d-foot"><button class="btn" data-act="cancel">Cancel</button><button class="btn primary" data-act="save">${label}</button></div>`;
 
 const EDIT = {
+  briefs(b){
+    const lines = arr => esc(listOf(arr).map(x => typeof x==='string' ? x : x.text).join('\n'));
+    const acts = esc(listOf(b.actions).map(a => [a.text, a.owner, a.due].filter((v,i)=>i===0||v).join(' | ')).join('\n'));
+    return head(b.title?'Edit brief':'New brief for Ronit') + `<form class="d-body" id="form" autocomplete="off">
+      <div class="field"><label for="f-title">Title</label><input type="text" id="f-title" value="${esc(b.title||'')}" placeholder="e.g. SC Cashflow chat: Oct 15 – Nov 6" data-autofocus></div>
+      <div class="fields2"><div class="field"><label for="f-chat">Chat or source</label><input type="text" id="f-chat" value="${esc(b.chat||'')}" placeholder="e.g. SC Cashflow 2026"></div>
+        <div class="field"><label for="f-date">Brief date</label><input type="date" id="f-date" value="${esc(b.date||todayPH())}"></div></div>
+      <div class="field"><label for="f-period">Period covered</label><input type="text" id="f-period" value="${esc(b.period||'')}" placeholder="e.g. Oct 15 – Nov 6, 2026"></div>
+      <div class="field"><label for="f-sum">Summary</label><textarea id="f-sum" style="min-height:80px">${esc(b.summary||'')}</textarea></div>
+      <div class="field"><label for="f-asks">Needs Ronit's decision</label><textarea id="f-asks" style="min-height:90px">${lines(b.asks)}</textarea><span class="hint">One per line.</span></div>
+      <div class="field"><label for="f-dec">Decisions made</label><textarea id="f-dec" style="min-height:90px">${lines(b.decisions)}</textarea><span class="hint">One per line.</span></div>
+      <div class="field"><label for="f-money">Money & numbers</label><textarea id="f-money" style="min-height:90px">${lines(b.money)}</textarea><span class="hint">One per line.</span></div>
+      <div class="field"><label for="f-acts">Action items</label><textarea id="f-acts" style="min-height:110px">${acts}</textarea><span class="hint">One per line, as: what | who | when. Items with Ronit as "who" also show in Waiting on Ronit.</span></div>
+      <div class="field"><label for="f-src">The chat in Source of truth</label><select id="f-src"><option value="">None</option>${docsSorted().map(d=>`<option value="${esc(d.id)}" ${b.sourceDocId===d.id?'selected':''}>${esc(d.title)}</option>`).join('')}</select></div>
+      <div class="field"><label for="f-note">Note (optional)</label><input type="text" id="f-note" value="${esc(b.note||'')}"></div>
+    </form>` + foot();
+  },
   meetings(m){
     const tpls = S.scripts.filter(s=>s.category==='Agenda template');
     const ag = agendaOf(m), ac = actionsOf(m);
@@ -702,6 +788,14 @@ async function submit(){
   } else if(col==='scripts'){
     if(!val('f-title')){ toast('Give the script a title.'); return; }
     data = {title:val('f-title'), category:val('f-cat'), body:$('#f-body').value};
+  } else if(col==='briefs'){
+    if(!val('f-title')){ toast('Give the brief a title.'); return; }
+    const split = id => $('#'+id).value.split('\n').map(t=>t.trim()).filter(Boolean);
+    const keepDone = (arr, text) => { const o = listOf(arr).find(x => x.text===text); return !!(o && o.done); };
+    data = {title:val('f-title'), chat:val('f-chat'), date:val('f-date'), period:val('f-period'), summary:$('#f-sum').value.trim(), note:val('f-note'), sourceDocId:val('f-src'),
+      decisions:split('f-dec'), money:split('f-money'),
+      asks:split('f-asks').map(t=>({text:t, done:keepDone(prev.asks,t)})),
+      actions:split('f-acts').map(l=>{ const [t,o,d]=l.split('|').map(x=>(x||'').trim()); return {text:t, owner:o||'', due:d||'', done:keepDone(prev.actions,t)}; }).filter(a=>a.text)};
   } else if(col==='updates'){
     if(!val('f-title')){ toast('Add a headline.'); return; }
     data = {title:val('f-title'), date:val('f-date'), body:$('#f-body').value, docId:val('f-doc')};
@@ -755,6 +849,13 @@ document.addEventListener('click', async e => {
     case 'new-meeting': S.drawer={col:'meetings',id:null,mode:'edit'}; document.body.classList.add('open'); renderDrawer(); break;
     case 'new-script': S.drawer={col:'scripts',id:null,mode:'edit'}; document.body.classList.add('open'); renderDrawer(); break;
     case 'new-doc': S.drawer={col:'docs',id:null,mode:'edit'}; document.body.classList.add('open'); renderDrawer(); break;
+    case 'new-brief': S.drawer={col:'briefs',id:null,mode:'edit'}; document.body.classList.add('open'); renderDrawer(); break;
+    case 'edit-brief': S.drawer={col:'briefs',id,mode:'edit'}; S.confirmDel=false; document.body.classList.add('open'); renderDrawer(); break;
+    case 'copy-brief': copyText(briefText(byId('briefs',id))); break;
+    case 'toggle-brief': {
+      const b = byId('briefs', id); if(!b) break;
+      const key = el.dataset.key; const arr = listOf(b[key]).map(x=>({...x})); const i = +el.dataset.i; if(!arr[i]) break;
+      arr[i].done = el.checked; patchDoc('briefs', id, {[key]: arr}); break; }
     case 'new-update': S.drawer={col:'updates',id:null,mode:'edit'}; document.body.classList.add('open'); renderDrawer(); break;
     case 'update-for': S.drawer={col:'updates',id:null,mode:'edit',draft:{docId:id}}; renderDrawer(); break;
     case 'meeting-from': { const s=byId('scripts',id); S.drawer={col:'meetings',id:null,mode:'edit',draft:{title:s.title.replace(/\s*template\s*/i,' ').trim(), agenda:lines(s.body).map(t=>({text:t,done:false}))}}; renderDrawer(); break; }

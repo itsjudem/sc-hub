@@ -24,7 +24,7 @@ create policy "members see team list" on public.sc_members
 -- 2) Everything in the hub: meetings, scripts, documents, updates
 create table if not exists public.sc_items (
   id         text primary key,
-  col        text not null check (col in ('meetings','scripts','docs','updates')),
+  col        text not null check (col in ('meetings','scripts','docs','updates','briefs')),
   data       jsonb not null default '{}'::jsonb,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
