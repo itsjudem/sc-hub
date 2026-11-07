@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Salon Cadence Hub</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#7b2d5d">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* Layout: fixed left rail of sections + wide work area; a right-hand drawer opens items to read or edit */
+  --bg:#f5f4f7;
+  --surface:#ffffff;
+  --ink:#1c1922;
+  --muted:#686274;
+  --line:#e2dfe8;
+  --accent:#7b2d5d;
+  --accent-soft:#f4e8f0;
+  --on-accent:#ffffff;
+  --good:#2b7a4b;
+  --good-soft:#e5f3ea;
+  --warn:#9a5f14;
+  --warn-soft:#fbf0de;
+  --display:'Bricolage Grotesque', 'Segoe UI', system-ui, sans-serif;
+  --body:'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --mono:'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace;
+  --radius:10px;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#141218; --surface:#1d1a23; --ink:#ece8f1; --muted:#a39cb0; --line:#312c3a;
+    --accent:#e48fc2; --accent-soft:#3b2333; --on-accent:#1c1922;
+    --good:#72c896; --good-soft:#1d3327; --warn:#e3ac60; --warn-soft:#3a2c17;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#141218; --surface:#1d1a23; --ink:#ece8f1; --muted:#a39cb0; --line:#312c3a;
+  --accent:#e48fc2; --accent-soft:#3b2333; --on-accent:#1c1922;
+  --good:#72c896; --good-soft:#1d3327; --warn:#e3ac60; --warn-soft:#3a2c17;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.5}
+button,input,select,textarea{font:inherit;color:inherit}
+a{color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;line-height:1.2}
+h1{font-size:30px;font-weight:700}
+h2{font-size:20px;font-weight:700}
+h3{font-size:16px;font-weight:600;font-family:var(--body)}
+
+.app{display:grid;grid-template-columns:232px 1fr;min-height:100%}
+.rail{background:var(--surface);border-right:1px solid var(--line);padding:20px 14px;display:flex;flex-direction:column;gap:20px;position:sticky;top:0;height:100vh}
+.brand{display:flex;flex-direction:column;gap:2px;padding:0 8px}
+.brand b{font-family:var(--display);font-size:19px;font-weight:700}
+.brand span{color:var(--muted);font-size:12.5px}
+.nav{display:flex;flex-direction:column;gap:2px}
+.nav a{display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border-radius:8px;text-decoration:none;color:var(--ink);font-weight:500}
+.nav a:hover{background:var(--bg)}
+.nav a.on{background:var(--accent-soft);color:var(--accent)}
+.nav .count{font-family:var(--mono);font-size:12px;color:var(--muted)}
+.rail-foot{margin-top:auto;font-size:12.5px;color:var(--muted);padding:0 8px}
+
+.main{min-width:0;display:flex;flex-direction:column}
+.topbar{display:flex;gap:12px;align-items:center;padding:14px 28px;border-bottom:1px solid var(--line);background:var(--surface);position:sticky;top:0;z-index:5;flex-wrap:wrap}
+.search{flex:1;min-width:200px;max-width:520px;padding:9px 12px;border:1px solid var(--line);border-radius:8px;background:var(--bg)}
+.topbar .spacer{flex:1}
+.content{padding:28px;display:flex;flex-direction:column;gap:24px;max-width:1180px;width:100%}
+
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:8px;border:1px solid var(--line);background:var(--surface);cursor:pointer;font-weight:500;text-decoration:none;color:var(--ink);white-space:nowrap}
+.btn:hover{border-color:var(--muted)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.small{padding:5px 10px;font-size:13.5px}
+.btn.ghost{border-color:transparent;background:transparent}
+.btn.danger{color:#b4233c;border-color:color-mix(in srgb,#b4233c 40%,var(--line))}
+.btn[disabled]{opacity:.55;cursor:not-allowed}
+
+.page-head{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap}
+.page-head p{margin:6px 0 0;color:var(--muted);max-width:62ch}
+.banner{padding:12px 14px;border-radius:8px;background:var(--warn-soft);color:var(--warn);font-weight:500}
+
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:18px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.card-head{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.card-head .label{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
+.empty{color:var(--muted);font-size:14px;padding:6px 0}
+
+.stats{display:flex;gap:10px;flex-wrap:wrap}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:6px 14px;font-size:13.5px;color:var(--muted)}
+.stat b{color:var(--ink);font-variant-numeric:tabular-nums;margin-right:4px}
+
+.chip{display:inline-block;font-size:12px;font-weight:600;padding:2px 9px;border-radius:999px;background:var(--accent-soft);color:var(--accent);white-space:nowrap}
+.chip.good{background:var(--good-soft);color:var(--good)}
+.chip.warn{background:var(--warn-soft);color:var(--warn)}
+.chip.plain{background:var(--bg);color:var(--muted);border:1px solid var(--line)}
+.kind{font-family:var(--mono);font-size:11px;letter-spacing:.04em;padding:3px 6px;border-radius:5px;border:1px solid var(--line);color:var(--muted);background:var(--bg);min-width:44px;text-align:center}
+
+.list{display:flex;flex-direction:column}
+.item{display:flex;gap:14px;align-items:flex-start;padding:12px 4px;border-top:1px solid var(--line);cursor:pointer;text-align:left;background:none;border-left:0;border-right:0;border-bottom:0;width:100%}
+.list .item:first-child{border-top:0}
+.item:hover .item-title{color:var(--accent)}
+.item-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.item-title{font-weight:600}
+.item-meta{font-size:13px;color:var(--muted);display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.item-snip{font-size:14px;color:var(--muted);overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+
+.datebox{width:52px;flex:none;border:1px solid var(--line);border-radius:8px;text-align:center;padding:4px 0;background:var(--bg)}
+.datebox small{display:block;font-size:11px;text-transform:uppercase;color:var(--muted);letter-spacing:.06em}
+.datebox b{display:block;font-family:var(--display);font-size:20px;line-height:1.1}
+
+.meter{height:6px;border-radius:99px;background:var(--line);overflow:hidden;width:120px}
+.meter i{display:block;height:100%;background:var(--good)}
+
+.checks{display:flex;flex-direction:column;gap:2px;list-style:none;margin:0;padding:0}
+.checks li{display:flex;gap:10px;align-items:flex-start;padding:6px 0}
+.checks input{margin-top:4px;width:16px;height:16px;accent-color:var(--accent);flex:none}
+.checks .done span{text-decoration:line-through;color:var(--muted)}
+.checks .owner{font-size:12.5px;color:var(--muted);margin-left:auto;white-space:nowrap}
+
+.filters{display:flex;gap:6px;flex-wrap:wrap}
+.filters button{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 12px;cursor:pointer;font-size:13.5px}
+.filters button.on{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
+.cards .card{cursor:pointer}
+.cards .card:hover{border-color:var(--accent)}
+.prose{white-space:pre-wrap;overflow-wrap:anywhere}
+.txt-prev{max-height:460px;overflow:auto;font-size:13.5px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:12px}
+
+.timeline{display:flex;flex-direction:column;gap:0;border-left:2px solid var(--line);margin-left:6px}
+.tl{position:relative;padding:4px 0 20px 22px}
+.tl::before{content:"";position:absolute;left:-7px;top:9px;width:12px;height:12px;border-radius:50%;background:var(--surface);border:2px solid var(--accent)}
+.tl .when{font-size:13px;color:var(--muted)}
+
+/* drawer */
+.scrim{position:fixed;inset:0;background:rgba(10,8,14,.38);z-index:20;display:none}
+.drawer{position:fixed;top:0;right:0;height:100%;width:min(620px,100%);background:var(--surface);border-left:1px solid var(--line);z-index:21;display:none;flex-direction:column}
+.open .scrim{display:block}
+.open .drawer{display:flex}
+.d-head{padding:18px 22px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+.d-body{padding:20px 22px;overflow:auto;flex:1;display:flex;flex-direction:column;gap:20px}
+.d-foot{padding:14px 22px;border-top:1px solid var(--line);display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.d-foot .left{margin-right:auto;display:flex;gap:8px}
+.section{display:flex;flex-direction:column;gap:8px}
+.section > .label{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
+
+.field{display:flex;flex-direction:column;gap:5px}
+.field label{font-size:13px;font-weight:600}
+.field .hint{font-size:12.5px;color:var(--muted)}
+.field input[type=text],.field input[type=url],.field input[type=date],.field input[type=time],.field select,.field textarea,.row-item input{padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);width:100%}
+.field textarea{min-height:120px;resize:vertical}
+.fields2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.rows{display:flex;flex-direction:column;gap:6px}
+.row-item{display:flex;gap:6px;align-items:center}
+.row-item .owner-in{max-width:150px}
+.seg{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;width:max-content}
+.seg button{border:0;background:var(--surface);padding:7px 14px;cursor:pointer;border-right:1px solid var(--line)}
+.seg button:last-child{border-right:0}
+.seg button.on{background:var(--accent);color:var(--on-accent)}
+
+.gate{display:none;min-height:100%;align-items:center;justify-content:center;padding:20px}
+.gate-card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:28px;width:100%;max-width:400px;display:flex;flex-direction:column;gap:14px}
+.gate-card p{margin:0;color:var(--muted)}
+.gate-card .field input{padding:9px 11px;border:1px solid var(--line);border-radius:8px;background:var(--bg);width:100%}
+.gate-card .btn{justify-content:center}
+.gate-msg{font-size:13.5px;min-height:1em}
+dialog{border:0;padding:0;background:transparent;color:var(--ink)}
+dialog::backdrop{background:rgba(10,8,14,.45)}
+a[aria-disabled="true"]{opacity:.6;pointer-events:none}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--surface);padding:10px 16px;border-radius:8px;z-index:40;font-size:14px;display:none;max-width:90vw}
+.toast.show{display:block}
+
+@media (max-width:820px){
+  .app{grid-template-columns:1fr}
+  .rail{position:static;height:auto;flex-direction:row;align-items:center;flex-wrap:wrap;padding:12px 16px;gap:10px}
+  .nav{flex-direction:row;flex-wrap:wrap}
+  .nav .count{display:none}
+  .rail-foot{margin-top:0;width:100%}
+  .topbar{padding:12px 16px;position:static}
+  .content{padding:20px 16px}
+  .grid2,.fields2{grid-template-columns:1fr}
+}
+@media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div class="gate" id="login">
+  <form class="gate-card" id="loginForm" autocomplete="on">
+    <h1>Salon Cadence Hub</h1>
+    <p>Team sign-in. Meetings, scripts and the documents we work from.</p>
+    <div class="field"><label for="loginEmail">Email</label><input type="email" id="loginEmail" required autocomplete="username"></div>
+    <div class="field"><label for="loginPass">Password</label><input type="password" id="loginPass" autocomplete="current-password"></div>
+    <button class="btn primary" id="loginBtn" type="submit">Sign in</button>
+    <button class="btn" id="linkBtn" type="button">Email me a sign-in link</button>
+    <p class="gate-msg" id="loginMsg" role="status"></p>
+  </form>
+</div>
+<div class="gate" id="denied">
+  <div class="gate-card">
+    <h1>Not on the team list</h1>
+    <p>You're signed in as <b id="deniedEmail"></b>, but that email hasn't been added to the Salon Cadence team. Ask Jude to add it, then sign in again.</p>
+    <button class="btn" data-signout type="button">Sign out</button>
+  </div>
+</div>
+<dialog id="passDlg">
+  <form id="passForm" class="gate-card" style="border:0">
+    <h2>Set a password</h2>
+    <div class="field"><label for="newPass">New password</label><input type="password" id="newPass" autocomplete="new-password"></div>
+    <div class="field"><label for="newPass2">Type it again</label><input type="password" id="newPass2" autocomplete="new-password"></div>
+    <p class="gate-msg" id="passMsg" role="status"></p>
+    <div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn" type="button" id="passCancel">Cancel</button><button class="btn primary" type="submit">Save password</button></div>
+  </form>
+</dialog>
+<div class="app" id="app" style="display:none">
+  <aside class="rail">
+    <div class="brand"><b>Salon Cadence</b><span>Team hub · PH time</span></div>
+    <nav class="nav" id="nav"></nav>
+    <div class="rail-foot"><div id="who" style="overflow-wrap:anywhere"></div><div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:6px"><button class="btn small ghost" id="setPass" type="button">Set password</button><button class="btn small ghost" data-signout type="button">Sign out</button></div></div>
+  </aside>
+  <div class="main">
+    <div class="topbar">
+      <input class="search" id="search" type="search" placeholder="Search meetings, scripts, documents, updates" aria-label="Search the hub">
+      <div class="spacer"></div>
+      <div id="quick"></div>
+    </div>
+    <main class="content" id="content"></main>
+  </div>
+</div>
+<div class="scrim" id="scrim"></div>
+<aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-labelledby="d-title"></aside>
+<div class="toast" id="toast" role="status"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script>
+(() => {
+const ROUTES = [
+  {id:'home', label:'Overview'},
+  {id:'meetings', label:'Meetings', col:'meetings'},
+  {id:'scripts', label:'Scripts & templates', col:'scripts'},
+  {id:'library', label:'Source of truth', col:'docs'},
+  {id:'updates', label:'Updates log', col:'updates'},
+];
+const COLS = ['meetings','scripts','docs','updates'];
+const MEETING_TYPES = ['Weekly projections & expenses','Profit First review','Team meeting','Client call','Other'];
+const SCRIPT_CATS = ['Agenda template','Call script','Talking points','Checklist','Other'];
+const DOC_CATS = ['Finance & projections','Billing & invoices','Processes & SOPs','Meeting records','WhatsApp & chat logs','Contracts & agreements','Other'];
+const TEXT_EXT = ['txt','md','csv','json'];
+// ====== SUPABASE PROJECT (same one as the task board) ======
+const SUPABASE_URL = "https://dhdxmisazbieajtmhbfm.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_-3hAoEzSLwnIpAbgaODi7Q_6kdiXl0F";
+const textCache = {};
+
+const S = {meetings:[],scripts:[],docs:[],updates:[],ready:{},status:'connecting',err:'',db:true,canWrite:true,email:'',route:'home',q:'',drawer:null,libCat:'All',libShowOld:false,scriptCat:'All',confirmDel:false};
+
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const todayPH = () => new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Manila',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+const parseD = d => { const [y,m,dd] = String(d||'').split('-').map(Number); return y ? new Date(Date.UTC(y,m-1,dd)) : null; };
+const fmtDate = d => { const dt = parseD(d); return dt ? dt.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric',timeZone:'UTC'}) : 'No date set'; };
+const fmtTime = t => { if(!t) return ''; const [h,m]=t.split(':').map(Number); const ap=h>=12?'PM':'AM'; return ((h%12)||12)+':'+String(m).padStart(2,'0')+' '+ap; };
+const fmtStamp = iso => { if(!iso) return ''; const d=new Date(iso); return isNaN(d)?'':d.toLocaleString('en-US',{timeZone:'Asia/Manila',month:'short',day:'numeric',year:'numeric'}); };
+const newId = () => Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+const byId = (col,id) => S[col].find(x => x.id === id);
+const lines = s => String(s||'').split('\n').map(l => l.replace(/^\s*([-*•]|\d+[.)])\s+/,'').trim()).filter(Boolean);
+const agendaOf = m => Array.isArray(m.agenda) ? m.agenda : [];
+const actionsOf = m => Array.isArray(m.actions) ? m.actions : [];
+
+function toast(msg){ const t=$('#toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(toast.t); toast.t=setTimeout(()=>t.classList.remove('show'),3200); }
+
+/* ---------- data ---------- */
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+const BUCKET = 'sc-files';
+const fromRow = r => ({...(r.data||{}), id:r.id, updatedAt:r.updated_at, updatedBy:r.updated_by});
+function setLocal(col, obj){ const i=S[col].findIndex(x=>x.id===obj.id); if(i>=0) S[col][i]=obj; else S[col].push(obj); }
+function writeErr(e){ console.error(e); toast('Couldn\'t save. Check your connection and try again.'); }
+async function saveDoc(col, id, data){
+  const now = new Date().toISOString();
+  const prev = byId(col,id) || {};
+  const body = {...prev, ...data, updatedAt: now, createdAt: prev.createdAt || now};
+  delete body.id; delete body.updatedBy;
+  const {error} = await sb.from('sc_items').upsert({id, col, data: body, updated_at: now, updated_by: S.email});
+  if(error){ writeErr(error); return false; }
+  setLocal(col, {...body, id, updatedBy:S.email}); renderAll(); return true;
+}
+async function patchDoc(col, id, data){
+  const prev = byId(col,id); if(!prev) return;
+  setLocal(col, {...prev, ...data}); renderAll();
+  await saveDoc(col, id, data);
+}
+async function removeDoc(col, id){
+  const {error} = await sb.from('sc_items').delete().eq('id', id);
+  if(error){ writeErr(error); return false; }
+  S[col] = S[col].filter(x=>x.id!==id); renderAll(); return true;
+}
+
+/* ---------- files (Supabase Storage) ---------- */
+const urlCache = {};
+async function signedUrl(path){
+  const c = urlCache[path]; if(c && c.exp > Date.now()) return c.url;
+  const {data, error} = await sb.storage.from(BUCKET).createSignedUrl(path, 3600);
+  if(error) throw error;
+  urlCache[path] = {url:data.signedUrl, exp:Date.now()+50*60*1000};
+  return data.signedUrl;
+}
+function fillFileLinks(){
+  document.querySelectorAll('#drawer a[data-path]').forEach(a => {
+    signedUrl(a.dataset.path).then(u => { a.href = u; a.removeAttribute('aria-disabled'); }).catch(() => { a.textContent = 'File not found'; });
+  });
+}
+
+/* ---------- sign-in ---------- */
+function showView(v){ ['login','denied'].forEach(id => $('#'+id).style.display = v===id ? 'flex' : 'none'); $('#app').style.display = v==='app' ? 'grid' : 'none'; }
+async function enter(session){
+  if(S.email) return;
+  S.email = session.user.email || '';
+  const {data, error} = await sb.from('sc_members').select('email').limit(1);
+  if(error || !data || !data.length){ $('#deniedEmail').textContent = S.email; showView('denied'); return; }
+  $('#who').textContent = S.email;
+  showView('app'); loadData();
+}
+async function loadData(){
+  S.status = 'connecting'; renderAll();
+  const {data, error} = await sb.from('sc_items').select('*');
+  if(error){ S.status='error'; renderAll(); return; }
+  COLS.forEach(c => S[c] = []);
+  data.forEach(r => { if(COLS.includes(r.col)) S[r.col].push(fromRow(r)); });
+  S.status = 'ok'; renderAll();
+  sb.channel('sc_items').on('postgres_changes', {event:'*', schema:'public', table:'sc_items'}, p => {
+    if(p.eventType==='DELETE'){ COLS.forEach(c => S[c] = S[c].filter(x => x.id !== p.old.id)); }
+    else if(COLS.includes(p.new.col)) setLocal(p.new.col, fromRow(p.new));
+    renderAll();
+  }).subscribe();
+}
+async function boot(){
+  readRoute();
+  $('#loginForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const email = $('#loginEmail').value.trim(), pass = $('#loginPass').value;
+    if(!email) return;
+    if(!pass){ $('#loginMsg').textContent = 'Type your password, or use the email link below.'; return; }
+    $('#loginBtn').disabled = true; $('#loginMsg').textContent = 'Signing in…';
+    const {error} = await sb.auth.signInWithPassword({email, password:pass});
+    $('#loginBtn').disabled = false;
+    $('#loginMsg').textContent = error ? ('Couldn\'t sign in: ' + (/invalid/i.test(error.message) ? 'wrong email or password.' : error.message)) : '';
+  });
+  $('#linkBtn').addEventListener('click', async () => {
+    const email = $('#loginEmail').value.trim();
+    if(!email){ $('#loginMsg').textContent = 'Type your email first.'; return; }
+    $('#linkBtn').disabled = true; $('#loginMsg').textContent = 'Sending…';
+    const {error} = await sb.auth.signInWithOtp({email, options:{emailRedirectTo: location.origin + location.pathname}});
+    $('#linkBtn').disabled = false;
+    $('#loginMsg').textContent = error ? (/rate limit/i.test(error.message) ? 'Too many sign-in emails right now. Try again in about an hour.' : 'Couldn\'t send the link: ' + error.message) : 'Check your email and tap the sign-in link. Then set a password so you won\'t need emails again.';
+  });
+  document.querySelectorAll('[data-signout]').forEach(b => b.addEventListener('click', async () => { await sb.auth.signOut(); location.reload(); }));
+  $('#passForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const a = $('#newPass').value, b = $('#newPass2').value;
+    if(a.length < 8){ $('#passMsg').textContent = 'Use at least 8 characters.'; return; }
+    if(a !== b){ $('#passMsg').textContent = 'The two passwords don\'t match.'; return; }
+    $('#passMsg').textContent = 'Saving…';
+    const {error} = await sb.auth.updateUser({password:a});
+    if(error){ $('#passMsg').textContent = 'Couldn\'t save: ' + error.message; return; }
+    $('#passDlg').close(); toast('Password saved. Use it to sign in on any device.');
+  });
+  $('#setPass').addEventListener('click', () => { $('#newPass').value=''; $('#newPass2').value=''; $('#passMsg').textContent=''; $('#passDlg').showModal(); });
+  $('#passCancel').addEventListener('click', () => $('#passDlg').close());
+  const {data:{session}} = await sb.auth.getSession();
+  if(session) enter(session); else showView('login');
+  sb.auth.onAuthStateChange((ev, s) => { if(s) enter(s); });
+}
+/* ---------- routing ---------- */
+function readRoute(){ const h=location.hash.replace('#',''); S.route = ROUTES.some(r=>r.id===h) ? h : 'home'; }
+window.addEventListener('hashchange', () => { readRoute(); renderAll(); window.scrollTo(0,0); });
+
+/* ---------- derived ---------- */
+const sortMeetingsAsc = arr => [...arr].sort((a,b)=> (a.date||'9999').localeCompare(b.date||'9999') || (a.time||'').localeCompare(b.time||''));
+function upcoming(){ const t=todayPH(); return sortMeetingsAsc(S.meetings.filter(m => !m.date || m.date>=t)); }
+function past(){ const t=todayPH(); return sortMeetingsAsc(S.meetings.filter(m => m.date && m.date<t)).reverse(); }
+function openActions(){
+  const out=[];
+  S.meetings.forEach(m => actionsOf(m).forEach((a,i) => { if(!a.done && a.text) out.push({m, a, i}); }));
+  return out.sort((x,y)=>(y.m.date||'').localeCompare(x.m.date||''));
+}
+const recentUpdates = () => [...S.updates].sort((a,b)=>(b.date||'').localeCompare(a.date||'') || (b.createdAt||'').localeCompare(a.createdAt||''));
+const docsSorted = () => [...S.docs].sort((a,b)=>(b.updatedAt||'').localeCompare(a.updatedAt||''));
+function kindLabel(d){
+  if(d.kind==='link') return 'LINK';
+  if(d.kind==='note') return 'NOTE';
+  const ext = String(d.fileName||'').split('.').pop();
+  return ext ? ext.toUpperCase().slice(0,4) : 'FILE';
+}
+function docHref(d){
+  if(d.kind==='link' && /^https?:\/\//i.test(d.url||'')) return d.url;
+  return '';
+}
+
+/* ---------- render: shell ---------- */
+function renderAll(){ renderNav(); renderQuick(); renderContent(); if(S.drawer && S.drawer.mode==='view') renderDrawer(); }
+function renderNav(){
+  const counts = {meetings:S.meetings.length, scripts:S.scripts.length, docs:S.docs.length, updates:S.updates.length};
+  $('#nav').innerHTML = ROUTES.map(r => `<a href="#${r.id}" class="${S.route===r.id?'on':''}" ${S.route===r.id?'aria-current="page"':''}>${esc(r.label)}${r.col?`<span class="count">${counts[r.col]}</span>`:''}</a>`).join('');
+}
+function renderQuick(){
+  const map = {home:['new-meeting','New meeting'], meetings:['new-meeting','New meeting'], scripts:['new-script','New script'], library:['new-doc','Add document'], updates:['new-update','Post update']};
+  const [act,label] = map[S.route];
+  $('#quick').innerHTML = S.canWrite && S.db ? `<button class="btn primary" data-act="${act}">+ ${label}</button>` : '';
+}
+function banner(){
+  if(S.status==='connecting') return `<div class="banner">Loading the hub…</div>`;
+  if(S.status==='error') return `<div class="banner">Couldn't load the hub. Refresh the page to try again.</div>`;
+  return '';
+}
+function renderContent(){
+  const el = $('#content');
+  if(S.q.trim()){ el.innerHTML = banner() + renderSearch(); return; }
+  const fn = {home:renderHome, meetings:renderMeetings, scripts:renderScripts, library:renderLibrary, updates:renderUpdates}[S.route];
+  el.innerHTML = banner() + fn();
+}
+
+/* ---------- pieces ---------- */
+function dateBox(d){
+  const dt = parseD(d);
+  if(!dt) return `<div class="datebox"><small>Date</small><b>—</b></div>`;
+  return `<div class="datebox"><small>${dt.toLocaleDateString('en-US',{month:'short',timeZone:'UTC'})}</small><b>${dt.getUTCDate()}</b><small>${dt.toLocaleDateString('en-US',{weekday:'short',timeZone:'UTC'})}</small></div>`;
+}
+function meetingItem(m){
+  const ag = agendaOf(m), done = ag.filter(a=>a.done).length;
+  const oa = actionsOf(m).filter(a=>!a.done && a.text).length;
+  return `<button class="item" data-act="open" data-col="meetings" data-id="${esc(m.id)}">
+    ${dateBox(m.date)}
+    <div class="item-body">
+      <span class="item-title">${esc(m.title||'Untitled meeting')}</span>
+      <span class="item-meta">${m.type?`<span class="chip">${esc(m.type)}</span>`:''}${m.time?`<span>${esc(fmtTime(m.time))} PH</span>`:''}${m.attendees?`<span>${esc(m.attendees)}</span>`:''}</span>
+      ${ag.length?`<span class="item-meta"><span class="meter" aria-hidden="true"><i style="width:${Math.round(done/ag.length*100)}%"></i></span><span>${done} of ${ag.length} agenda items covered</span>${oa?`<span class="chip warn">${oa} open action${oa>1?'s':''}</span>`:''}</span>`:''}
+    </div></button>`;
+}
+function docItem(d){
+  const status = d.status==='superseded' ? `<span class="chip plain">Superseded</span>` : `<span class="chip good">Current</span>`;
+  return `<button class="item" data-act="open" data-col="docs" data-id="${esc(d.id)}">
+    <span class="kind">${esc(kindLabel(d))}</span>
+    <div class="item-body">
+      <span class="item-title">${esc(d.title||'Untitled')}</span>
+      <span class="item-meta">${status}<span>${esc(d.category||'Other')}</span>${d.version?`<span>${esc(d.version)}</span>`:''}<span>Updated ${esc(fmtStamp(d.updatedAt))}</span></span>
+      ${d.description?`<span class="item-snip">${esc(d.description)}</span>`:''}
+    </div></button>`;
+}
+function updateItem(u){
+  return `<button class="item" data-act="open" data-col="updates" data-id="${esc(u.id)}">
+    ${dateBox(u.date)}
+    <div class="item-body"><span class="item-title">${esc(u.title||'Update')}</span>${u.body?`<span class="item-snip">${esc(u.body)}</span>`:''}</div></button>`;
+}
+function scriptCard(s){
+  const prev = String(s.body||'').split('\n').filter(l=>l.trim()).slice(0,4).join('\n');
+  return `<div class="card" data-act="open" data-col="scripts" data-id="${esc(s.id)}" tabindex="0" role="button">
+    <div class="card-head"><h3>${esc(s.title||'Untitled')}</h3><span class="chip">${esc(s.category||'Other')}</span></div>
+    <div class="prose item-snip" style="-webkit-line-clamp:4">${esc(prev)||'<span class="empty">No text yet.</span>'}</div>
+  </div>`;
+}
+
+/* ---------- pages ---------- */
+function renderHome(){
+  const next = upcoming()[0];
+  const acts = openActions();
+  const ups = recentUpdates().slice(0,4);
+  const docs = docsSorted().filter(d=>d.status!=='superseded').slice(0,5);
+  let nextHtml = `<p class="empty">No upcoming meeting scheduled.</p>${S.canWrite&&S.db?`<div><button class="btn small" data-act="new-meeting">Plan the next meeting</button></div>`:''}`;
+  if(next){
+    const ag = agendaOf(next);
+    nextHtml = `<div style="display:flex;gap:14px;align-items:flex-start">${dateBox(next.date)}<div class="item-body">
+        <span class="item-title" style="font-size:17px">${esc(next.title||'Untitled meeting')}</span>
+        <span class="item-meta">${next.type?`<span class="chip">${esc(next.type)}</span>`:''}${next.time?`<span>${esc(fmtTime(next.time))} PH</span>`:''}${next.attendees?`<span>${esc(next.attendees)}</span>`:''}</span></div></div>
+      ${ag.length?`<ol style="margin:0;padding-left:20px;display:flex;flex-direction:column;gap:3px">${ag.slice(0,6).map(a=>`<li>${esc(a.text)}</li>`).join('')}${ag.length>6?`<li style="list-style:none;color:var(--muted)">+ ${ag.length-6} more</li>`:''}</ol>`:'<p class="empty">No agenda yet.</p>'}
+      <div><button class="btn small primary" data-act="open" data-col="meetings" data-id="${esc(next.id)}">Open agenda</button></div>`;
+  }
+  return `
+  <div class="page-head"><div><h1>Salon Cadence Hub</h1><p>What to cover in each meeting, the scripts we use, and the documents we treat as the source of truth. Dates and times are Philippine time.</p></div></div>
+  <div class="stats">
+    <span class="stat"><b>${upcoming().length}</b>upcoming meetings</span>
+    <span class="stat"><b>${acts.length}</b>open action items</span>
+    <span class="stat"><b>${S.docs.filter(d=>d.status!=='superseded').length}</b>current documents</span>
+    <span class="stat"><b>${S.scripts.length}</b>scripts & templates</span>
+  </div>
+  <div class="grid2">
+    <section class="card"><div class="card-head"><span class="label">Next meeting</span><a href="#meetings" class="btn small ghost">All meetings</a></div>${nextHtml}</section>
+    <section class="card"><div class="card-head"><span class="label">Open action items</span></div>
+      ${acts.length?`<ul class="checks">${acts.slice(0,8).map(x=>`<li><input type="checkbox" id="oa-${esc(x.m.id)}-${x.i}" data-act="toggle-action" data-id="${esc(x.m.id)}" data-i="${x.i}" ${S.canWrite?'':'disabled'}><label for="oa-${esc(x.m.id)}-${x.i}"><span>${esc(x.a.text)}</span><br><small style="color:var(--muted)">From ${esc(x.m.title||'meeting')} · ${esc(fmtDate(x.m.date))}</small></label>${x.a.owner?`<span class="owner">${esc(x.a.owner)}</span>`:''}</li>`).join('')}</ul>${acts.length>8?`<p class="empty">+ ${acts.length-8} more in Meetings</p>`:''}`:'<p class="empty">Nothing open. Action items you add to meetings show up here until they\'re ticked off.</p>'}
+    </section>
+    <section class="card"><div class="card-head"><span class="label">Latest updates</span><a href="#updates" class="btn small ghost">Updates log</a></div>
+      ${ups.length?`<div class="list">${ups.map(updateItem).join('')}</div>`:'<p class="empty">No updates posted yet.</p>'}
+    </section>
+    <section class="card"><div class="card-head"><span class="label">Current documents</span><a href="#library" class="btn small ghost">Source of truth</a></div>
+      ${docs.length?`<div class="list">${docs.map(docItem).join('')}</div>`:'<p class="empty">No documents yet. Add files, links or written notes in Source of truth.</p>'}
+    </section>
+  </div>`;
+}
+function renderMeetings(){
+  const up = upcoming(), pa = past();
+  return `<div class="page-head"><div><h1>Meetings</h1><p>Plan each meeting's agenda and talking points ahead of time, tick items off as you cover them, and capture notes and action items.</p></div></div>
+  <section class="card"><div class="card-head"><span class="label">Upcoming</span></div>${up.length?`<div class="list">${up.map(meetingItem).join('')}</div>`:'<p class="empty">No upcoming meetings.</p>'}</section>
+  <section class="card"><div class="card-head"><span class="label">Past meetings</span></div>${pa.length?`<div class="list">${pa.map(meetingItem).join('')}</div>`:'<p class="empty">Past meetings and their notes will be kept here.</p>'}</section>`;
+}
+function renderScripts(){
+  const cats = ['All', ...SCRIPT_CATS];
+  const list = S.scripts.filter(s => S.scriptCat==='All' || (s.category||'Other')===S.scriptCat).sort((a,b)=>(a.title||'').localeCompare(b.title||''));
+  return `<div class="page-head"><div><h1>Scripts & templates</h1><p>Reusable agendas, call scripts and talking points. An agenda template can start a new meeting with its items already filled in.</p></div></div>
+  <div class="filters" role="group" aria-label="Filter by category">${cats.map(c=>`<button data-act="script-cat" data-v="${esc(c)}" class="${S.scriptCat===c?'on':''}">${esc(c)}</button>`).join('')}</div>
+  ${list.length?`<div class="cards">${list.map(scriptCard).join('')}</div>`:'<p class="empty">Nothing here yet.</p>'}`;
+}
+function renderLibrary(){
+  const cats = ['All', ...DOC_CATS];
+  const list = docsSorted().filter(d => (S.libCat==='All' || (d.category||'Other')===S.libCat) && (S.libShowOld || d.status!=='superseded'));
+  const oldCount = S.docs.filter(d=>d.status==='superseded').length;
+  return `<div class="page-head"><div><h1>Source of truth</h1><p>The documents, links and written facts the team works from. When something changes, update the entry or mark the old one superseded so everyone knows which version counts.</p></div></div>
+  <div class="filters" role="group" aria-label="Filter by category">${cats.map(c=>`<button data-act="lib-cat" data-v="${esc(c)}" class="${S.libCat===c?'on':''}">${esc(c)}</button>`).join('')}</div>
+  <section class="card">${list.length?`<div class="list">${list.map(docItem).join('')}</div>`:'<p class="empty">No documents in this view.</p>'}
+  ${oldCount?`<div><button class="btn small ghost" data-act="lib-old">${S.libShowOld?'Hide':'Show'} ${oldCount} superseded</button></div>`:''}</section>`;
+}
+function renderUpdates(){
+  const ups = recentUpdates();
+  return `<div class="page-head"><div><h1>Updates log</h1><p>A running record of changes, decisions and new information, newest first. Link an update to the document it changes.</p></div></div>
+  <section class="card">${ups.length?`<div class="timeline">${ups.map(u=>{ const d=u.docId&&byId('docs',u.docId); return `<div class="tl"><div class="when">${esc(fmtDate(u.date))}</div><button class="item" style="padding:2px 0;border:0" data-act="open" data-col="updates" data-id="${esc(u.id)}"><div class="item-body"><span class="item-title">${esc(u.title||'Update')}</span>${u.body?`<span class="prose" style="color:var(--ink);font-size:14.5px">${esc(u.body)}</span>`:''}</div></button>${d?`<div style="margin-top:6px"><button class="btn small" data-act="open" data-col="docs" data-id="${esc(d.id)}">Related: ${esc(d.title)}</button></div>`:''}</div>`;}).join('')}</div>`:'<p class="empty">No updates yet.</p>'}</section>`;
+}
+function renderSearch(){
+  const q = S.q.trim().toLowerCase();
+  const hit = o => JSON.stringify(o).toLowerCase().includes(q);
+  const m = sortMeetingsAsc(S.meetings.filter(hit)).reverse(), s = S.scripts.filter(hit), d = docsSorted().filter(hit), u = recentUpdates().filter(hit);
+  const total = m.length+s.length+d.length+u.length;
+  return `<div class="page-head"><div><h1>Results for “${esc(S.q.trim())}”</h1><p>${total} match${total===1?'':'es'}</p></div><button class="btn" data-act="clear-search">Clear search</button></div>
+  ${m.length?`<section class="card"><div class="card-head"><span class="label">Meetings</span></div><div class="list">${m.map(meetingItem).join('')}</div></section>`:''}
+  ${s.length?`<section class="card"><div class="card-head"><span class="label">Scripts & templates</span></div><div class="cards">${s.map(scriptCard).join('')}</div></section>`:''}
+  ${d.length?`<section class="card"><div class="card-head"><span class="label">Source of truth</span></div><div class="list">${d.map(docItem).join('')}</div></section>`:''}
+  ${u.length?`<section class="card"><div class="card-head"><span class="label">Updates</span></div><div class="list">${u.map(updateItem).join('')}</div></section>`:''}`;
+}
+
+/* ---------- drawer ---------- */
+function openDrawer(col, id, mode){ S.drawer = {col, id, mode}; S.confirmDel=false; document.body.classList.add('open'); renderDrawer(); const f=$('#drawer [data-autofocus]')||$('#drawer .d-head button'); f && f.focus(); }
+function closeDrawer(){ S.drawer=null; document.body.classList.remove('open'); $('#drawer').innerHTML=''; }
+function head(title, sub){ return `<div class="d-head"><div><h2 id="d-title">${esc(title)}</h2>${sub?`<div class="item-meta" style="margin-top:6px">${sub}</div>`:''}</div><button class="btn small ghost" data-act="close" aria-label="Close">Close</button></div>`; }
+function renderDrawer(){
+  if(!S.drawer) return;
+  const {col,id,mode,draft} = S.drawer;
+  const obj = id ? byId(col,id) : null;
+  if(mode==='view' && !obj){ closeDrawer(); return; }
+  const html = mode==='view' ? VIEW[col](obj) : EDIT[col](obj || draft || {});
+  $('#drawer').innerHTML = html;
+  document.querySelectorAll('#drawer .txt-prev').forEach(loadText);
+  fillFileLinks();
+}
+function loadText(el){
+  const aid = el.dataset.asset;
+  if(textCache[aid]!=null) return;
+  sb.storage.from(BUCKET).download(aid).then(({data, error}) => { if(error) throw error; return data.text(); })
+    .then(t => { textCache[aid] = t.length > 400000 ? t.slice(0,400000) + '\n\n… (open the file to read the rest)' : t; const cur=document.querySelector('#drawer .txt-prev[data-asset="'+CSS.escape(aid)+'"]'); if(cur) cur.textContent = textCache[aid]; })
+    .catch(() => { el.textContent = 'Couldn\'t load the text. Use the Open button above.'; });
+}
+const editBtns = (col,id) => S.canWrite&&S.db ? `<div class="left">${S.confirmDel?`<button class="btn danger" data-act="del-yes" data-col="${col}" data-id="${esc(id)}">Yes, delete</button><button class="btn" data-act="del-no">Keep</button>`:`<button class="btn danger" data-act="del-ask">Delete</button>`}</div><button class="btn primary" data-act="edit" data-col="${col}" data-id="${esc(id)}">Edit</button>` : '';
+
+const VIEW = {
+  meetings(m){
+    const ag = agendaOf(m), ac = actionsOf(m);
+    const dis = S.canWrite ? '' : 'disabled';
+    return head(m.title||'Untitled meeting', `<span>${esc(fmtDate(m.date))}${m.time?' · '+esc(fmtTime(m.time))+' PH':''}</span>${m.type?`<span class="chip">${esc(m.type)}</span>`:''}`) + `<div class="d-body">
+      ${m.attendees?`<div class="section"><span class="label">Attendees</span><div>${esc(m.attendees)}</div></div>`:''}
+      <div class="section"><span class="label">Agenda · tick items as you cover them</span>${ag.length?`<ul class="checks">${ag.map((a,i)=>`<li class="${a.done?'done':''}"><input type="checkbox" id="ag-${i}" data-act="toggle-agenda" data-id="${esc(m.id)}" data-i="${i}" ${a.done?'checked':''} ${dis}><label for="ag-${i}"><span>${esc(a.text)}</span></label></li>`).join('')}</ul>`:'<p class="empty">No agenda items yet.</p>'}</div>
+      <div class="section"><span class="label">Talking points & script</span>${m.talking?`<div class="prose">${esc(m.talking)}</div>`:'<p class="empty">None added.</p>'}</div>
+      <div class="section"><span class="label">Notes</span>${m.notes?`<div class="prose">${esc(m.notes)}</div>`:'<p class="empty">No notes yet.</p>'}</div>
+      <div class="section"><span class="label">Action items</span>${ac.length?`<ul class="checks">${ac.map((a,i)=>`<li class="${a.done?'done':''}"><input type="checkbox" id="ac-${i}" data-act="toggle-action" data-id="${esc(m.id)}" data-i="${i}" ${a.done?'checked':''} ${dis}><label for="ac-${i}"><span>${esc(a.text)}</span></label>${a.owner?`<span class="owner">${esc(a.owner)}</span>`:''}</li>`).join('')}</ul>`:'<p class="empty">No action items.</p>'}</div>
+    </div><div class="d-foot"><button class="btn" data-act="copy-meeting" data-id="${esc(m.id)}">Copy agenda as text</button>${editBtns('meetings',m.id)}</div>`;
+  },
+  scripts(s){
+    const isTpl = s.category==='Agenda template';
+    return head(s.title||'Untitled', `<span class="chip">${esc(s.category||'Other')}</span><span>Updated ${esc(fmtStamp(s.updatedAt))}</span>`) + `<div class="d-body"><div class="prose">${esc(s.body||'')||'<span class="empty">No text yet.</span>'}</div></div>
+      <div class="d-foot"><button class="btn" data-act="copy-script" data-id="${esc(s.id)}">Copy text</button>${isTpl&&S.canWrite&&S.db?`<button class="btn" data-act="meeting-from" data-id="${esc(s.id)}">New meeting from this</button>`:''}${editBtns('scripts',s.id)}</div>`;
+  },
+  docs(d){
+    const href = docHref(d);
+    const rel = recentUpdates().filter(u=>u.docId===d.id);
+    const hist = Array.isArray(d.history) ? [...d.history].reverse() : [];
+    return head(d.title||'Untitled', `${d.status==='superseded'?'<span class="chip plain">Superseded</span>':'<span class="chip good">Current</span>'}<span>${esc(d.category||'Other')}</span>${d.version?`<span>${esc(d.version)}</span>`:''}<span>Updated ${esc(fmtStamp(d.updatedAt))}</span>`) + `<div class="d-body">
+      ${href?`<div><a class="btn primary" href="${esc(href)}" target="_blank" rel="noopener">Open link</a></div>`:(d.kind==='link'?'<p class="empty">No link saved yet.</p>':'')}
+      ${d.kind==='file'&&d.filePath?`<div><a class="btn primary" href="#" aria-disabled="true" data-path="${esc(d.filePath)}" target="_blank" rel="noopener">Open ${esc(d.fileName||'file')}</a></div>`:''}
+      ${d.kind==='link'&&d.url?`<div class="section"><span class="label">Link</span><div style="overflow-wrap:anywhere;font-size:14px">${esc(d.url)}</div></div>`:''}
+      ${d.description?`<div class="section"><span class="label">What this is</span><div class="prose">${esc(d.description)}</div></div>`:''}
+      ${d.kind==='file'&&d.filePath&&TEXT_EXT.includes(String(d.fileName||'').split('.').pop().toLowerCase())?`<div class="section"><span class="label">${d.category==='WhatsApp & chat logs'?'Conversation':'Contents'}</span><div class="prose txt-prev" data-asset="${esc(d.filePath)}">${textCache[d.filePath]!=null?esc(textCache[d.filePath]):'Loading…'}</div></div>`:''}
+      ${d.kind==='note'?`<div class="section"><span class="label">Content</span><div class="prose">${esc(d.body||'')||'<span class="empty">Empty.</span>'}</div></div>`:''}
+      ${hist.length?`<div class="section"><span class="label">Earlier versions</span><div class="list">${hist.map(h=>`<div class="item" style="cursor:default"><span class="kind">${esc(String(h.fileName||'').split('.').pop().toUpperCase().slice(0,4)||'FILE')}</span><div class="item-body"><a href="#" aria-disabled="true" data-path="${esc(h.filePath||'')}" target="_blank" rel="noopener">${esc(h.fileName||'File')}</a><span class="item-meta">${esc(h.version||'')} Replaced ${esc(fmtStamp(h.replacedAt))}</span></div></div>`).join('')}</div></div>`:''}
+      <div class="section"><span class="label">Related updates</span>${rel.length?`<div class="list">${rel.map(updateItem).join('')}</div>`:'<p class="empty">None yet.</p>'}${S.canWrite&&S.db?`<div><button class="btn small" data-act="update-for" data-id="${esc(d.id)}">Log an update about this</button></div>`:''}</div>
+    </div><div class="d-foot">${editBtns('docs',d.id)}</div>`;
+  },
+  updates(u){
+    const d = u.docId && byId('docs',u.docId);
+    return head(u.title||'Update', `<span>${esc(fmtDate(u.date))}</span>`) + `<div class="d-body"><div class="prose">${esc(u.body||'')}</div>
+      ${d?`<div><button class="btn small" data-act="open" data-col="docs" data-id="${esc(d.id)}">Related: ${esc(d.title)}</button></div>`:''}</div>
+      <div class="d-foot">${editBtns('updates',u.id)}</div>`;
+  }
+};
+
+const opts = (arr, v) => arr.map(x=>`<option ${x===v?'selected':''}>${esc(x)}</option>`).join('');
+const agRow = (a={}) => `<div class="row-item" data-done="${a.done?1:0}"><input type="text" class="ag-text" value="${esc(a.text||'')}" aria-label="Agenda item"><button type="button" class="btn small ghost" data-act="rm-row" aria-label="Remove item">Remove</button></div>`;
+const acRow = (a={}) => `<div class="row-item" data-done="${a.done?1:0}"><input type="text" class="ac-text" value="${esc(a.text||'')}" aria-label="Action item"><input type="text" class="ac-owner owner-in" value="${esc(a.owner||'')}" placeholder="Owner" aria-label="Owner"><button type="button" class="btn small ghost" data-act="rm-row" aria-label="Remove item">Remove</button></div>`;
+const foot = (label='Save') => `<div class="d-foot"><button class="btn" data-act="cancel">Cancel</button><button class="btn primary" data-act="save">${label}</button></div>`;
+
+const EDIT = {
+  meetings(m){
+    const tpls = S.scripts.filter(s=>s.category==='Agenda template');
+    const ag = agendaOf(m), ac = actionsOf(m);
+    return head(m.title?'Edit meeting':'New meeting') + `<form class="d-body" id="form" autocomplete="off">
+      <div class="field"><label for="f-title">Title</label><input type="text" id="f-title" value="${esc(m.title||'')}" placeholder="e.g. Weekly projections check-in" data-autofocus></div>
+      <div class="fields2">
+        <div class="field"><label for="f-date">Date</label><input type="date" id="f-date" value="${esc(m.date||todayPH())}"></div>
+        <div class="field"><label for="f-time">Time (PH)</label><input type="time" id="f-time" value="${esc(m.time||'')}"></div>
+      </div>
+      <div class="fields2">
+        <div class="field"><label for="f-type">Meeting type</label><select id="f-type">${opts(MEETING_TYPES, m.type||MEETING_TYPES[0])}</select></div>
+        <div class="field"><label for="f-att">Attendees</label><input type="text" id="f-att" value="${esc(m.attendees||'')}" placeholder="Names"></div>
+      </div>
+      <div class="field"><label>Agenda</label>
+        ${tpls.length?`<div class="row-item"><select id="f-tpl" aria-label="Agenda template"><option value="">Add items from a template…</option>${tpls.map(t=>`<option value="${esc(t.id)}">${esc(t.title)}</option>`).join('')}</select></div>`:''}
+        <div class="rows" id="ag-rows">${(ag.length?ag:[{}]).map(agRow).join('')}</div>
+        <div><button type="button" class="btn small" data-act="add-ag">+ Add agenda item</button></div></div>
+      <div class="field"><label for="f-talk">Talking points & script</label><textarea id="f-talk" placeholder="What to say, numbers to bring up, questions to ask">${esc(m.talking||'')}</textarea></div>
+      <div class="field"><label for="f-notes">Notes</label><textarea id="f-notes" placeholder="What was discussed and decided">${esc(m.notes||'')}</textarea></div>
+      <div class="field"><label>Action items</label><div class="rows" id="ac-rows">${(ac.length?ac:[{}]).map(acRow).join('')}</div>
+        <div><button type="button" class="btn small" data-act="add-ac">+ Add action item</button></div></div>
+    </form>` + foot();
+  },
+  scripts(s){
+    return head(s.title?'Edit script':'New script or template') + `<form class="d-body" id="form" autocomplete="off">
+      <div class="field"><label for="f-title">Title</label><input type="text" id="f-title" value="${esc(s.title||'')}" data-autofocus></div>
+      <div class="field"><label for="f-cat">Category</label><select id="f-cat">${opts(SCRIPT_CATS, s.category||SCRIPT_CATS[0])}</select><span class="hint">For an agenda template, put one agenda item per line. Each line becomes a checklist item in the meeting.</span></div>
+      <div class="field"><label for="f-body">Text</label><textarea id="f-body" style="min-height:300px">${esc(s.body||'')}</textarea></div>
+    </form>` + foot();
+  },
+  docs(d){
+    const kind = S.drawer.kind || d.kind || 'file';
+    const canUpload = true;
+    return head(d.title?'Edit document':'Add to source of truth') + `<form class="d-body" id="form" autocomplete="off">
+      <div class="field"><label for="f-title">Title</label><input type="text" id="f-title" value="${esc(d.title||'')}" data-autofocus></div>
+      <div class="field"><label>Type</label><div class="seg" role="group" aria-label="Document type">
+        <button type="button" data-act="kind" data-v="file" class="${kind==='file'?'on':''}">File</button>
+        <button type="button" data-act="kind" data-v="link" class="${kind==='link'?'on':''}">Link</button>
+        <button type="button" data-act="kind" data-v="note" class="${kind==='note'?'on':''}">Written note</button></div></div>
+      ${kind==='file'?`<div class="field"><label for="f-file">${d.filePath?'Replace with a new version':'File'}</label>
+        ${canUpload?`<input type="file" id="f-file">`:'<p class="empty">Only people who can edit the hub can upload files.</p>'}
+        ${d.fileName?`<span class="hint">Current file: ${esc(d.fileName)}. The old version stays available under Earlier versions.</span>`:''}
+        <span class="hint">WhatsApp chats: in the chat, tap the contact or group name, then Export chat, Without media, and upload the .txt file. If you get a .zip, unzip it and upload the .txt inside so it can be read here.</span>
+        <span class="hint">Any file type up to 50 MB: PDF, Word, Excel, images, text. For a Google Sheet that keeps changing, add it as a Link instead so it's always current.</span></div>`:''}
+      ${kind==='link'?`<div class="field"><label for="f-url">Link</label><input type="url" id="f-url" value="${esc(d.url||'')}" placeholder="https://docs.google.com/…"></div>`:''}
+      ${kind==='note'?`<div class="field"><label for="f-body">Content</label><textarea id="f-body" style="min-height:220px" placeholder="Write the facts, rules or decisions the team should follow">${esc(d.body||'')}</textarea></div>`:''}
+      <div class="fields2">
+        <div class="field"><label for="f-cat">Category</label><select id="f-cat">${opts(DOC_CATS, d.category||DOC_CATS[0])}</select></div>
+        <div class="field"><label for="f-ver">Version or period</label><input type="text" id="f-ver" value="${esc(d.version||'')}" placeholder="e.g. Oct–Dec 2026"></div>
+      </div>
+      <div class="field"><label for="f-desc">What this is and when to use it</label><textarea id="f-desc" style="min-height:90px">${esc(d.description||'')}</textarea></div>
+      <div class="field"><label for="f-status">Status</label><select id="f-status"><option value="current" ${d.status!=='superseded'?'selected':''}>Current (the version to use)</option><option value="superseded" ${d.status==='superseded'?'selected':''}>Superseded (kept for reference)</option></select></div>
+    </form>` + foot();
+  },
+  updates(u){
+    return head(u.title?'Edit update':'Post an update') + `<form class="d-body" id="form" autocomplete="off">
+      <div class="field"><label for="f-title">Headline</label><input type="text" id="f-title" value="${esc(u.title||'')}" data-autofocus></div>
+      <div class="field"><label for="f-date">Date</label><input type="date" id="f-date" value="${esc(u.date||todayPH())}"></div>
+      <div class="field"><label for="f-body">Details</label><textarea id="f-body" style="min-height:180px">${esc(u.body||'')}</textarea></div>
+      <div class="field"><label for="f-doc">Related document</label><select id="f-doc"><option value="">None</option>${docsSorted().map(d=>`<option value="${esc(d.id)}" ${u.docId===d.id?'selected':''}>${esc(d.title)}</option>`).join('')}</select></div>
+    </form>` + foot();
+  }
+};
+
+const val = id => { const e=document.getElementById(id); return e ? e.value.trim() : ''; };
+async function submit(){
+  const {col,id} = S.drawer;
+  const prev = id ? byId(col,id) || {} : {};
+  const docId = id || newId();
+  let data;
+  if(col==='meetings'){
+    data = {title:val('f-title')||'Untitled meeting', date:val('f-date'), time:val('f-time'), type:val('f-type'), attendees:val('f-att'), talking:$('#f-talk').value, notes:$('#f-notes').value,
+      agenda:[...document.querySelectorAll('#ag-rows .row-item')].map(r=>({text:r.querySelector('.ag-text').value.trim(), done:r.dataset.done==='1'})).filter(a=>a.text),
+      actions:[...document.querySelectorAll('#ac-rows .row-item')].map(r=>({text:r.querySelector('.ac-text').value.trim(), owner:r.querySelector('.ac-owner').value.trim(), done:r.dataset.done==='1'})).filter(a=>a.text)};
+  } else if(col==='scripts'){
+    if(!val('f-title')){ toast('Give the script a title.'); return; }
+    data = {title:val('f-title'), category:val('f-cat'), body:$('#f-body').value};
+  } else if(col==='updates'){
+    if(!val('f-title')){ toast('Add a headline.'); return; }
+    data = {title:val('f-title'), date:val('f-date'), body:$('#f-body').value, docId:val('f-doc')};
+  } else {
+    const kind = S.drawer.kind || prev.kind || 'file';
+    if(!val('f-title')){ toast('Give the document a title.'); return; }
+    data = {title:val('f-title'), kind, category:val('f-cat'), version:val('f-ver'), description:$('#f-desc').value, status:val('f-status')};
+    if(kind==='link'){
+      const u = val('f-url');
+      if(u && !/^https?:\/\//i.test(u)){ toast('Links need to start with https://'); return; }
+      data.url = u;
+    }
+    if(kind==='note') data.body = $('#f-body').value;
+    if(kind==='file'){
+      const f = $('#f-file') && $('#f-file').files[0];
+      if(!f && !prev.filePath){ toast('Choose a file to upload.'); return; }
+      if(f){
+        if(f.size > 50*1024*1024){ toast('That file is over 50 MB.'); return; }
+        const btn = $('[data-act="save"]'); btn.disabled = true; btn.textContent = 'Uploading…';
+        try{
+          const path = docId + '/' + Date.now() + '-' + f.name.replace(/[^\w.\-]+/g,'_');
+          const {error} = await sb.storage.from(BUCKET).upload(path, f, {contentType: f.type || 'application/octet-stream'});
+          if(error) throw error;
+          if(prev.filePath){ data.history = [...(Array.isArray(prev.history)?prev.history:[]), {filePath:prev.filePath, fileName:prev.fileName, version:prev.version||'', replacedAt:new Date().toISOString()}]; }
+          data.filePath = path; data.fileName = f.name;
+        }catch(e){
+          btn.disabled=false; btn.textContent='Save';
+          console.error(e);
+          toast(/size|large/i.test(e && e.message || '') ? 'That file is too large.' : 'Upload failed. Try again.');
+          return;
+        }
+      }
+    }
+  }
+  const ok = await saveDoc(col, docId, data);
+  if(ok){ toast('Saved'); openDrawer(col, docId, 'view'); }
+}
+
+async function copyText(t){ try{ await navigator.clipboard.writeText(t); toast('Copied'); }catch(e){ toast('Copying was blocked. Select the text and copy it instead.'); } }
+
+/* ---------- events ---------- */
+document.addEventListener('click', async e => {
+  const el = e.target.closest('[data-act]');
+  if(!el) { if(e.target.id==='scrim') maybeClose(); return; }
+  const a = el.dataset.act, col = el.dataset.col, id = el.dataset.id;
+  switch(a){
+    case 'open': openDrawer(col, id, 'view'); break;
+    case 'close': case 'cancel':
+      if(S.drawer && S.drawer.mode==='edit' && S.drawer.id) openDrawer(S.drawer.col, S.drawer.id, 'view'); else closeDrawer(); break;
+    case 'edit': S.drawer = {col, id, mode:'edit'}; renderDrawer(); break;
+    case 'new-meeting': S.drawer={col:'meetings',id:null,mode:'edit'}; document.body.classList.add('open'); renderDrawer(); break;
+    case 'new-script': S.drawer={col:'scripts',id:null,mode:'edit'}; document.body.classList.add('open'); renderDrawer(); break;
+    case 'new-doc': S.drawer={col:'docs',id:null,mode:'edit'}; document.body.classList.add('open'); renderDrawer(); break;
+    case 'new-update': S.drawer={col:'updates',id:null,mode:'edit'}; document.body.classList.add('open'); renderDrawer(); break;
+    case 'update-for': S.drawer={col:'updates',id:null,mode:'edit',draft:{docId:id}}; renderDrawer(); break;
+    case 'meeting-from': { const s=byId('scripts',id); S.drawer={col:'meetings',id:null,mode:'edit',draft:{title:s.title.replace(/\s*template\s*/i,' ').trim(), agenda:lines(s.body).map(t=>({text:t,done:false}))}}; renderDrawer(); break; }
+    case 'save': e.preventDefault(); submit(); break;
+    case 'kind': S.drawer.kind = el.dataset.v; { const keep={title:val('f-title'),category:val('f-cat'),version:val('f-ver'),description:$('#f-desc').value,status:val('f-status')}; if(!S.drawer.id){ S.drawer.draft={...(S.drawer.draft||{}),...keep}; } renderDrawer(); } break;
+    case 'add-ag': $('#ag-rows').insertAdjacentHTML('beforeend', agRow()); $('#ag-rows .row-item:last-child input').focus(); break;
+    case 'add-ac': $('#ac-rows').insertAdjacentHTML('beforeend', acRow()); $('#ac-rows .row-item:last-child input').focus(); break;
+    case 'rm-row': el.closest('.row-item').remove(); break;
+    case 'del-ask': S.confirmDel=true; renderDrawer(); break;
+    case 'del-no': S.confirmDel=false; renderDrawer(); break;
+    case 'del-yes': {
+      const obj = byId(col,id);
+      const ok = await removeDoc(col,id);
+      if(ok){
+        if(col==='docs' && obj){ const paths=[obj.filePath, ...(Array.isArray(obj.history)?obj.history.map(h=>h.filePath):[])].filter(Boolean); if(paths.length) sb.storage.from(BUCKET).remove(paths).catch(()=>{}); }
+        closeDrawer(); toast('Deleted');
+      }
+      break; }
+    case 'toggle-agenda': case 'toggle-action': {
+      const m = byId('meetings', id); if(!m) break;
+      const key = a==='toggle-agenda' ? 'agenda' : 'actions';
+      const arr = (key==='agenda'?agendaOf(m):actionsOf(m)).map(x=>({...x}));
+      const i = +el.dataset.i; if(!arr[i]) break;
+      arr[i].done = el.checked;
+      patchDoc('meetings', id, {[key]: arr});
+      break; }
+    case 'copy-meeting': { const m=byId('meetings',id); const t=[`${m.title||'Meeting'} · ${fmtDate(m.date)}${m.time?' '+fmtTime(m.time)+' PH':''}`, '', 'Agenda:', ...agendaOf(m).map((x,i)=>`${i+1}. ${x.text}`), ...(m.talking?['','Talking points:',m.talking]:[])].join('\n'); copyText(t); break; }
+    case 'copy-script': copyText(byId('scripts',id).body||''); break;
+    case 'script-cat': S.scriptCat = el.dataset.v; renderContent(); break;
+    case 'lib-cat': S.libCat = el.dataset.v; renderContent(); break;
+    case 'lib-old': S.libShowOld = !S.libShowOld; renderContent(); break;
+    case 'clear-search': S.q=''; $('#search').value=''; renderContent(); break;
+  }
+});
+document.addEventListener('change', e => {
+  if(e.target.id==='f-tpl' && e.target.value){
+    const s = byId('scripts', e.target.value);
+    const rows = $('#ag-rows');
+    [...rows.querySelectorAll('.row-item')].forEach(r => { if(!r.querySelector('input').value.trim()) r.remove(); });
+    lines(s && s.body).forEach(t => rows.insertAdjacentHTML('beforeend', agRow({text:t})));
+    if(!$('#f-title').value.trim() && s) $('#f-title').value = s.title.replace(/\s*template\s*/i,' ').trim();
+    e.target.value='';
+  }
+});
+document.addEventListener('keydown', e => {
+  if(e.key==='Escape' && S.drawer) maybeClose();
+  if((e.key==='Enter'||e.key===' ') && e.target.matches('.card[role="button"]')){ e.preventDefault(); e.target.click(); }
+});
+document.addEventListener('submit', e => { e.preventDefault(); });
+function maybeClose(){ if(S.drawer && S.drawer.mode==='edit' && S.drawer.id) openDrawer(S.drawer.col,S.drawer.id,'view'); else closeDrawer(); }
+$('#scrim').addEventListener('click', maybeClose);
+let st; $('#search').addEventListener('input', e => { clearTimeout(st); st=setTimeout(()=>{ S.q=e.target.value; renderContent(); },150); });
+
+boot();
+})();
+</script>
+</body>
+</html>
